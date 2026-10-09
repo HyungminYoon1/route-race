@@ -1,7 +1,3 @@
-export function rng(seed=1) {
-  let s=(Number(seed)>>>0)||1;
-  return () => { s=(Math.imul(s,1664525)+1013904223)>>>0; return s/4294967296; };
-}
 export function clamp(n,min,max) { return Math.min(max,Math.max(min,n)); }
 export function number(value,min,max,label="value") {
   const n=Number(value);

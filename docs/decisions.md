@@ -26,3 +26,39 @@
 - Rationale: 재현 가능한 검사와 읽을 수 있는 결과를 제공하고 브라우저 자원 사용을 제한합니다.
 - Affected: dist/src/model.js, dist/src/app.js, dist/index.html, dist/styles.css and test/model.test.js.
 - Review: 큰 지도를 위한 우선순위 큐 최적화는 이번 크기에서 필요하지 않습니다. 지도 확대 시 성능과 동률 처리 규칙을 재검토합니다.
+
+## D04 — Reachable RR1 challenges and fresh attempts / 2026-10-09
+
+- Context: consecutive LCG seeds produced similar layouts, and arbitrary random walls could prevent meaningful comparison.
+- Options: retry until a solver succeeds; fixed templates with increasing labels; constructive seeded maps with a versioned replay code.
+- Decision: five families (cost trap, DFS maze, staggered bottlenecks, distance lure, mixed terrain), constructive connectivity, deterministic uint32 PRNG in the pure model and RR1-family-seed codes. UI-only crypto picks each fresh attempt; a collision with the previous seed is changed by XOR. Distinct seeds can legitimately yield the same finite layout. RR1 reproduces only the original map; edits and w are explicitly separate.
+- Rationale: reproducible rules, broad structural variety and bounded generation without hidden retries or invented difficulty numbers.
+- Affected: dist/src/model.js, dist/src/app.js, dist/index.html, test/oracle.test.js, README.md, architecture.md.
+- Follow-up review: change the version if generation rules change; retain old rules if old codes must remain compatible. Reachability does not apply after editing.
+
+## D05 — Preserve optimal searches; isolate heuristic tradeoffs / 2026-10-09
+
+- Context: users need to explore heuristic tradeoffs without silently changing orthodox A*.
+- Options: change base A*'s heuristic; greedy search; a separate Weighted A* lane with reopening and a proved ratio; a bounded closed-once Weighted A* lane with no ratio claim.
+- Decision: preserve BFS minimum steps and Dijkstra/A* minimum cost. Add Weighted A* with w={1,1.5,2,3,4}, unique open entries, no closed-cell reopening, discovery-order ties, and termination when E is popped. Only w=1 guarantees minimum cost. w>1 explicitly promises neither optimal cost nor fewer expansions; no approximation ratio is claimed.
+- Rationale: honest comparison, deterministic traces and at most V expansions per strategy. Independent Bellman-Ford tests verify orthodox guarantees and weighted counterexamples rather than treating Dijkstra/A* agreement as an oracle.
+- Affected: dist/src/model.js, dist/src/app.js, dist/index.html, test/oracle.test.js, architecture.md, README.md.
+- Follow-up review: any reopening, queue optimization, heuristic or movement change needs renewed proof, trace semantics and oracle checks.
+
+## D06 — Evidence-based missions and bounded traces / 2026-10-09
+
+- Context: animation alone does not explain strategic choices or offer a measurable learning goal.
+- Options: arbitrary level scores; prewritten winning answers; actual prediction comparisons plus constrained map design.
+- Decision: predictions lock at computation, and answers derive from actual costs or expansions. Build mission starts blank, holds S/E fixed, permits 1-8 net changed cells and requires BFS cost minus Dijkstra cost >=8. A gap of 8 represents two net extra rough-terrain penalties (5-1); it is a concrete cost goal, not a difficulty rating. Failure/no path receives specific feedback. Frontier indices, extracted g/h/priority, five next candidates and each relaxation are shown per step. BFS g explicitly means steps, not terrain cost.
+- Rationale: meaningful and inspectable goals; outcomes need not match a canned answer. Each trace is capped by V steps, V frontier indices, five scored candidates and four updates. Sampling five candidates is disclosed; the full frontier remains visible as outlines.
+- Affected: dist/src/model.js, dist/src/app.js, dist/index.html, dist/styles.css, test/oracle.test.js, README.md.
+- Follow-up review: learning outcomes are not validated by these tests; no ranking, measured speed or user ability claim. Additional missions must have explicit satisfiable rules.
+
+## D07 — Transient undo and lifecycle / 2026-10-09
+
+- Context: experimental editing needs recovery and keyboard/touch operation without retaining visitor history.
+- Options: browser persistence/exported state; unlimited undo; a bounded transient undo stack.
+- Decision: at most 32 changed-cell board snapshots in memory, reset on map replacement. No storage, cookies, backend, tracking or new requests. Map/weight edits invalidate predictions and results. Outside-canvas drag points are ignored. Animation frames run only during playback, pause on hidden page, cancel on exit; reduced-motion starts paused. Optional WebMCP uses the same paint/solve actions and rejects missing paint mode.
+- Rationale: recovery within the static architecture and finite browser work; no data-retention or access-control expansion.
+- Affected: dist/src/app.js, dist/src/ui.js, dist/index.html, dist/styles.css, architecture.md.
+- Follow-up review: gesture-wide undo and saving edited maps are deferred. Any persistence or network access needs a separate explicit decision and authorization.

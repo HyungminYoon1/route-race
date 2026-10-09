@@ -12,6 +12,9 @@ async function walk(dir) {
     if(/\.(js|css|html)$/.test(e.name)) {
       const bytes=await readFile(p);
       assert(!(bytes[0]===239&&bytes[1]===187&&bytes[2]===191),"Unexpected BOM");
+      const source = new TextDecoder("utf-8", {fatal:true}).decode(bytes);
+      assert(!/(?<!\r)\n/.test(source), "Expected CRLF: " + e.name);
+      if(e.name==="model.js") assert(!/\bimport\b|\bdocument\b|\bwindow\b|\bDate\b|Math\.random|localStorage|sessionStorage/.test(source), "Model must remain pure and deterministic");
     }
     if(e.name.endsWith(".js")) execFileSync(process.execPath,["--check",p],{stdio:"inherit"});
     if(!e.name.endsWith(".html")) continue;
@@ -28,4 +31,4 @@ async function walk(dir) {
   }
 }
 await walk(root);
-console.log(`PASS: ${count} public files; syntax, local references, metadata, CSP and UTF-8 without BOM.`);
+console.log(`PASS: ${count} public files; syntax, local references, metadata, CSP, strict UTF-8 without BOM, CRLF and pure model boundary.`);
