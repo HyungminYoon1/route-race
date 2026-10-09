@@ -166,3 +166,14 @@ test("build mission requires a real cost gap, fixed endpoints and edit budget", 
   const blocked = structuredClone(b); for (const i of adjacent(blocked, blocked.end)) blocked.cells[i] = -1;
   assert.equal(evaluateBuild(blocked, baseline, results(blocked)).success, false);
 });
+
+test("custom integer entry costs preserve optimality against the independent oracle", () => {
+  let state = 37;
+  const next = () => {state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state;};
+  for (let n = 0; n < 60; n++) {
+    const width = 2 + next() % 9, height = 2 + next() % 7;
+    const board = {width, height, cells: Array.from({length: width * height}, () => next() % 7 === 0 ? -1 : 1 + next() % 99), start: 0, end: width * height - 1};
+    board.cells[0] = 99; board.cells[board.end] = 1;
+    compare(board);
+  }
+});

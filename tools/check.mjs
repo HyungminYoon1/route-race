@@ -15,6 +15,12 @@ async function walk(dir) {
       const source = new TextDecoder("utf-8", {fatal:true}).decode(bytes);
       assert(!/(?<!\r)\n/.test(source), "Expected CRLF: " + e.name);
       if(e.name==="model.js") assert(!/\bimport\b|\bdocument\b|\bwindow\b|\bDate\b|Math\.random|localStorage|sessionStorage/.test(source), "Model must remain pure and deterministic");
+      if(e.name==="achievements.js") assert(!/\bdocument\b|\bwindow\b|\bDate\b|Math\.random|localStorage|sessionStorage/.test(source), "Achievement rules must remain pure");
+      if(e.name.endsWith(".js")) for (const [,ref] of source.matchAll(/\bfrom\s+"([^"]+)"/g)) {
+        const target = resolve(dirname(p), ref);
+        assert(target.startsWith(root + sep), "Module escaped dist");
+        await readFile(target);
+      }
     }
     if(e.name.endsWith(".js")) execFileSync(process.execPath,["--check",p],{stdio:"inherit"});
     if(!e.name.endsWith(".html")) continue;

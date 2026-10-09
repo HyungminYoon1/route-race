@@ -11,46 +11,53 @@
 <body>
 <header><a class="brand" href="./">ROUTE <b>RACE</b></a><nav aria-label="사이트 링크"><a href="https://hyungminyoon1.github.io/web-lab/">WEB LAB ↗</a><a href="https://github.com/HyungminYoon1/route-race" target="_blank" rel="noopener noreferrer">소스 ↗</a></nav></header>
 <main>
-<div class="title"><div><p class="eyebrow">PATHFINDING / PREDICT · BUILD · EXPLAIN</p><h1>짧은 길, 싼 길, 끌리는 길.</h1><p>결과를 예측하고, 지도에 반례를 만들어 보세요.</p></div><button id="run" class="primary">네 전략 실행 ↗</button></div>
+<div class="title"><h1>길찾기 전략 비교</h1><button id="run" class="primary">네 전략 실행</button></div>
 <section class="challenge-bar" aria-label="도전 선택과 재현">
 <div><label for="challenge">도전 지형</label><select id="challenge"><option value="trap">싼 우회로 · 비용 함정</option><option value="maze">막다른 미로 · 가지 탐색</option><option value="bottleneck">엇갈린 관문 · 병목</option><option value="lure">거리의 유혹 · 추정의 한계</option><option value="mixed">구조된 황야 · 혼합 지형</option></select></div>
 <button id="random">새 시도 ↻</button>
 <div class="replay-field"><label for="replayCode">원본 재현 코드</label><input id="replayCode" type="text" maxlength="32" spellcheck="false" autocomplete="off" aria-describedby="codeHelp"></div><button id="replay">코드로 재현</button>
-<p id="codeHelp">코드는 원본 지형만 복원합니다. w는 아래에서 맞추세요. 편집·예측은 저장되지 않습니다.</p>
+<p id="codeHelp">RR1은 원본 지형만 복원합니다. 편집 지도와 w는 아래 지도 코드로 공유하세요.</p>
 </section>
+<details class="map-sharing"><summary>지도 코드 내보내기 · 가져오기</summary>
+<label for="mapCode">RRM1 지도 코드</label><textarea id="mapCode" rows="3" maxlength="8192" spellcheck="false" autocomplete="off" aria-describedby="mapShareHelp"></textarea>
+<div class="share-actions"><button id="exportMap">코드 만들기</button><button id="copyMap">현재 지도 복사</button><button id="importMap">가져오기</button></div>
+<p id="mapShareHelp">모든 칸·S/E·험지 비용·w를 포함합니다. 최대 30×20칸, 8192자. 복사 버튼을 누를 때만 클립보드에 쓰며 업로드하지 않습니다.</p>
+</details>
 <div class="map-desk">
-<section class="editor" aria-labelledby="mapTitle"><div class="section-heading"><h2 id="mapTitle">가설을 지도에 그리세요</h2><span>20 × 12 · 상하좌우 이동</span></div>
+<section class="editor" aria-labelledby="mapTitle"><div class="section-heading"><h2 id="mapTitle">지도 편집</h2><span id="mapSize">20 × 12 · 상하좌우 이동</span></div>
 <canvas id="map" width="800" height="480" tabindex="0" aria-describedby="editorHelp cursor" aria-label="지도 편집기"></canvas>
 <p id="cursor" class="cursor" role="status"></p><p id="codeLabel" class="code-label"></p>
 </section>
-<aside class="tools" aria-label="지도 도구"><p class="eyebrow">MAP TOOLS</p><h2>지형과 목적지</h2>
-<div class="paint-tools"><button data-mode="wall" aria-pressed="true">벽 세우기</button><button data-mode="weight" aria-pressed="false">험지 · 비용 5</button><button data-mode="erase" aria-pressed="false">평지 · 비용 1</button><button data-mode="start" aria-pressed="false">출발 S</button><button data-mode="end" aria-pressed="false">도착 E</button><button id="undo" disabled>한 칸 되돌리기</button></div>
+<aside class="tools" aria-label="지도 도구"><h2>지형과 목적지</h2>
+<div class="paint-tools"><button data-mode="wall" aria-pressed="true">벽</button><button data-mode="weight" aria-pressed="false">험지 · 비용 5</button><button data-mode="erase" aria-pressed="false">평지 · 비용 1</button><button data-mode="start" aria-pressed="false">출발 S</button><button data-mode="end" aria-pressed="false">도착 E</button><button id="undo" disabled>되돌리기</button></div>
+<label for="terrainCost">그릴 험지 비용 (2~99)</label><input id="terrainCost" type="number" min="2" max="99" step="1" value="5"><p>기존 칸의 비용은 유지됩니다. 설계 미션은 5 고정.</p>
 <p id="editorHelp">마우스·터치로 그리거나, 편집기에 Tab으로 진입한 뒤 방향키와 <kbd>Space</kbd>/<kbd>Enter</kbd>로 편집하세요.</p>
 <div class="actions"><button id="sample">기본 지도</button><button id="clear">빈 지도</button><button id="restart">다시 시작</button></div>
 <p class="key"><i></i>벽 <i></i>험지 <b>S</b>출발 <b>E</b>도착</p>
-<p id="status" role="status">도전의 결과를 먼저 예측해 보세요. 원본 지도는 도달 가능합니다.</p>
+<p id="status" role="status">실행 대기</p>
 </aside>
 </div>
 <section class="mission-panel" aria-labelledby="missionTitle">
-<div class="mission-heading"><div><p class="eyebrow">YOUR EXPERIMENT</p><h2 id="missionTitle">결과를 예측하고 근거를 확인하세요</h2></div><div><label for="missionMode">미션</label><select id="missionMode"><option value="predict">결과 예측</option><option value="build">8칸 비용 차이 설계</option></select></div></div>
+<div class="mission-heading"><h2 id="missionTitle">결과 예측</h2><div><label for="missionMode">미션</label><select id="missionMode"><option value="predict">결과 예측</option><option value="build">8칸 비용 차이 설계</option></select></div></div>
 <p id="question"></p>
 <div id="predictionChoices" class="prediction-choices" role="group" aria-label="비교 결과 예측"><button data-prediction="yes" aria-pressed="false">그렇다</button><button data-prediction="no" aria-pressed="false">아니다</button></div>
-<p id="predictionState"></p><details class="hint"><summary>생각의 힌트</summary><p id="hintText"></p></details><div id="feedback" role="status"></div>
+<p id="predictionState"></p><details class="hint" id="hint"><summary>힌트</summary><p id="hintText"></p></details><div id="feedback" role="status"></div>
+<details class="device-record"><summary>기기 완료 기록</summary><p id="recordStatus" role="status"></p><p>힌트·가져오기·예제 없이 완료한 설계 미션 1개만 기록합니다. 성공 지도는 이 기기에 저장하고 갤러리에는 완료 수·전체 수·갱신 시각만 공유합니다.</p><button id="eraseRecord">완료 기록 지우기</button></details>
 </section>
 <section class="race" aria-labelledby="raceTitle">
-<div class="race-heading"><div><h2 id="raceTitle">어떤 후보를 먼저 꺼냈을까요?</h2><p>한 단계는 한 칸 확장입니다. 같은 간격의 기록 재생이며 실행 시간 벤치마크가 아닙니다.</p></div><div class="playback"><button id="play">재생</button><button id="next">한 단계</button><button id="finish">결과 보기</button></div></div>
-<div class="heuristic-control"><div><label for="weight">Weighted A* 거리 가중치 w</label><select id="weight"><option value="1">1 · 최적성 보장</option><option value="1.5">1.5 · 거리 강조</option><option value="2" selected>2 · 거리 강조</option><option value="3">3 · 거리 강조</option><option value="4">4 · 거리 강조</option></select></div><output id="weightOut">g + 2h</output><p>w&gt;1은 적은 확장을 유도할 수 있지만, 비용·확장 수 개선을 보장하지 않습니다. 바꾸면 예측과 결과가 초기화됩니다.</p></div>
+<div class="race-heading"><div><h2 id="raceTitle">탐색 기록</h2><p>한 단계 = 한 칸 확장. 재생 간격은 실행 시간과 무관합니다.</p></div><div class="playback"><button id="play">재생</button><button id="next">한 단계</button><button id="finish">결과 보기</button></div></div>
+<div class="heuristic-control"><div><label for="weight">Weighted A* 거리 가중치 w</label><select id="weight"><option value="1">1 · 최소 비용 보장</option><option value="1.5">1.5</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select></div><output id="weightOut">g + 2h</output><p>w&gt;1: 최소 비용·확장 수 감소 보장 없음.</p></div>
 <p class="trace-key">옅은 색: 확장한 칸 · 점선: 후보 · 검은 테두리/점: 방금 꺼낸 칸 · 진한 색: 완료 경로</p>
 <label class="progress-label" for="progress">탐색 단계 <output id="stepOut">0</output></label><input id="progress" type="range" min="0" max="1" value="0">
 <div class="lanes">
-<article class="lane bfs"><div class="lane-heading"><h3>BFS</h3><small>최소 이동 횟수</small></div><canvas id="bfs" width="800" height="480" role="img" aria-label="BFS 탐색 경로"></canvas><div class="results" id="bfsMetrics"></div><p>선입선출. 가중치가 있어도 이동 횟수만 최소화합니다. 최소 비용은 보장하지 않습니다.</p><div class="trace-info" id="bfsTrace"></div></article>
+<article class="lane bfs"><div class="lane-heading"><h3>BFS</h3><small>최소 이동 횟수</small></div><canvas id="bfs" width="800" height="480" role="img" aria-label="BFS 탐색 경로"></canvas><div class="results" id="bfsMetrics"></div><p>선입선출. 최소 비용 보장 없음.</p><div class="trace-info" id="bfsTrace"></div></article>
 <article class="lane dijkstra"><div class="lane-heading"><h3>Dijkstra</h3><small>최소 비용 보장</small></div><canvas id="dijkstra" width="800" height="480" role="img" aria-label="Dijkstra 탐색 경로"></canvas><div class="results" id="dijkstraMetrics"></div><p>g가 작은 후보부터 확장합니다. g는 출발 이후 지형 진입 비용의 합입니다.</p><div class="trace-info" id="dijkstraTrace"></div></article>
 <article class="lane astar"><div class="lane-heading"><h3>A*</h3><small>최소 비용 보장</small></div><canvas id="astar" width="800" height="480" role="img" aria-label="A* 탐색 경로"></canvas><div class="results" id="astarMetrics"></div><p>g + h 우선. h는 맨해튼 거리이며 최소 진입 비용이 1이라 남은 비용을 과대평가하지 않습니다.</p><div class="trace-info" id="astarTrace"></div></article>
 <article class="lane weighted"><div class="lane-heading"><h3>Weighted A*</h3><small>g + wh</small></div><canvas id="weighted" width="800" height="480" role="img" aria-label="Weighted A* 탐색 경로"></canvas><div class="results" id="weightedMetrics"></div><p id="weightedGuarantee">w=2: 최소 비용 보장 없음</p><p>거리를 강조하는 별도 전략. 닫힌 칸을 재확장하지 않으며 E를 꺼내면 종료합니다.</p><div class="trace-info" id="weightedTrace"></div></article>
 </div>
 <div id="comparison" class="comparison" aria-label="완료 결과 비교"></div>
 </section>
-<details class="conditions"><summary>동률, 보장 범위, 재현 조건</summary><p>상하좌우 네 방향만 이동합니다. 평지 진입 비용 1, 험지 5, 출발 칸 비용 제외. 이웃을 오른쪽→아래→왼쪽→위 순서로 발견하며, 우선값 동률이면 먼저 발견한 후보부터 꺼냅니다. 후보의 g가 개선되어도 발견 순서는 바뀌지 않습니다.</p><p>각 칸은 최대 한 번 확장합니다. BFS는 최소 이동 횟수, Dijkstra와 기본 A*는 최소 비용을 보장합니다. Weighted A*는 w=1일 때 기본 A*와 같으며 w&gt;1의 최적성·근사 비율을 주장하지 않습니다. 방문·후보 수는 이 구현의 탐색 기록이며 실제 성능 벤치마크가 아닙니다.</p><p>재현 코드는 RR1 생성 규칙과 시드를 나타냅니다. 원본의 도달 가능성만 보장하며 편집 후에는 끊길 수 있습니다. 코드·w를 같게 맞추면 원본 결과와 동률 처리가 재현됩니다. 상태는 페이지 메모리에만 남고 새로고침하면 초기화됩니다.</p><a href="https://visualgo.net/en/sssp" target="_blank" rel="noopener noreferrer">최단 경로 개념 더 알아보기 ↗</a></details>
-</main><footer>ROUTE RACE / 관찰하고, 예측하고, 반례를 설계하세요.</footer>
+<details class="conditions"><summary>탐색 규칙 · 저장 범위</summary><p>상하좌우 이동, 출발 칸 비용 제외. 평지 1, 험지 2~99, 벽 통과 불가. RR1 도전과 설계 미션은 1/5 비용을 유지합니다. 이웃 발견은 오른쪽→아래→왼쪽→위 순서이며, 우선값 동률이면 먼저 발견한 후보를 꺼냅니다.</p><p>각 칸은 최대 한 번 확장합니다. Dijkstra·A*의 최소 비용은 이 지도의 진입 비용 합에 대한 보장입니다. Weighted A*는 w=1이면 A*와 같고, w&gt;1은 최적 비용·근사 비율 보장 없음.</p><p>RR1은 원본 생성 규칙과 시드, RRM1은 편집 지도 전체와 w를 담습니다. 예측·탐색 결과·되돌리기는 저장하지 않습니다. 완료 기록 외 편집 상태는 새로고침하면 초기화됩니다. 서버·업로드·공개 순위는 없습니다.</p><a href="https://visualgo.net/en/sssp" target="_blank" rel="noopener noreferrer">최단 경로 개념 ↗</a></details>
+</main><footer>ROUTE RACE</footer>
 </body>
 </html>

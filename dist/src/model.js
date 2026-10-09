@@ -1,4 +1,7 @@
 export const WIDTH = 20, HEIGHT = 12;
+export const MAX_CELL_COST = 99;
+export const HEURISTIC_WEIGHTS = [1, 1.5, 2, 3, 4];
+export const MAX_MAP_CODE = 8192;
 export const ALGORITHMS = ["bfs", "dijkstra", "astar", "weighted"];
 export const CHALLENGES = [
   {id: "trap", title: "싼 우회로", question: "BFS의 짧은 길은 Dijkstra의 길보다 비쌀까요?", hint: "험지 한 칸을 평지 다섯 칸과 바꾸어 생각하세요. 우회로의 추가 이동과 험지의 추가 비용을 비교하세요."},
@@ -32,7 +35,8 @@ export function validate(board) {
       board.width < 2 || board.height < 2 || board.width > 30 || board.height > 20 ||
       !Array.isArray(board.cells) || board.cells.length !== board.width * board.height) throw new TypeError("Invalid board");
   // Indexed checks reject sparse arrays as well as invalid values.
-  for (let i = 0; i < board.cells.length; i++) if (![-1, 1, 5].includes(board.cells[i])) throw new TypeError("Invalid cell");
+  for (let i = 0; i < board.cells.length; i++) if (!Number.isInteger(board.cells[i]) ||
+    (board.cells[i] !== -1 && (board.cells[i] < 1 || board.cells[i] > MAX_CELL_COST))) throw new TypeError("Invalid cell");
   for (const key of ["start", "end"]) if (!Number.isInteger(board[key]) || board[key] < 0 ||
     board[key] >= board.cells.length || board.cells[board[key]] === -1) throw new TypeError("Invalid endpoint");
   return board;
@@ -52,7 +56,7 @@ export function solve(board, algorithm, options = {}) {
   if (!ALGORITHMS.includes(algorithm)) throw new TypeError("Unknown algorithm");
   if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some(k => k !== "weight")) throw new TypeError("Invalid options");
   const weight = Object.hasOwn(options, "weight") ? options.weight : 2;
-  if (![1, 1.5, 2, 3, 4].includes(weight)) throw new RangeError("Invalid heuristic weight");
+  if (!HEURISTIC_WEIGHTS.includes(weight)) throw new RangeError("Invalid heuristic weight");
   const size = board.cells.length, dist = Array(size).fill(Infinity), prev = Array(size).fill(-1);
   const closed = new Set(), visited = [], trace = [], frontier = [board.start];
   const h = i => Math.abs(i % board.width - board.end % board.width) + Math.abs(Math.floor(i / board.width) - Math.floor(board.end / board.width));
@@ -91,13 +95,14 @@ export function solve(board, algorithm, options = {}) {
     cost: found ? path.slice(1).reduce((sum, i) => sum + board.cells[i], 0) : null};
 }
 
-export function paint(board, x, y, mode) {
+export function paint(board, x, y, mode, terrainCost = 5) {
   validate(board);
+  if (!Number.isInteger(terrainCost) || terrainCost < 2 || terrainCost > MAX_CELL_COST) throw new RangeError("Invalid terrain cost");
   if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= board.width || y >= board.height ||
       !["wall", "weight", "erase", "start", "end"].includes(mode)) throw new TypeError("Invalid paint action");
   const index = y * board.width + x, next = structuredClone(board);
   if (mode === "start" || mode === "end") {next[mode] = index; next.cells[index] = 1;}
-  else if (index !== board.start && index !== board.end) next.cells[index] = {wall: -1, weight: 5, erase: 1}[mode];
+  else if (index !== board.start && index !== board.end) next.cells[index] = {wall: -1, weight: terrainCost, erase: 1}[mode];
   return next;
 }
 
@@ -173,12 +178,38 @@ export function parseChallengeCode(code) {
 }
 export function randomBoard(seed = 1) {return challengeBoard("mixed", seed);}
 
+function exactKeys(value, keys) {
+  if (!value || typeof value !== "object" || Array.isArray(value) ||
+    Object.keys(value).length !== keys.length || keys.some(k => !Object.hasOwn(value, k))) throw new TypeError("Invalid map fields");
+}
+function mapPayload(value) {
+  exactKeys(value, ["version", "width", "height", "tiles", "start", "end", "terrainCost", "weight"]);
+  if (value.version !== 1 || !Number.isInteger(value.terrainCost) || value.terrainCost < 2 || value.terrainCost > MAX_CELL_COST ||
+    !HEURISTIC_WEIGHTS.includes(value.weight)) throw new TypeError("Invalid map settings");
+  const board = validate({width: value.width, height: value.height, cells: value.tiles, start: value.start, end: value.end});
+  return {board: structuredClone(board), terrainCost: value.terrainCost, weight: value.weight};
+}
+export function exportMap(board, terrainCost = 5, weight = 2) {
+  exactKeys(board, ["width", "height", "cells", "start", "end"]);
+  const payload = {version: 1, width: board.width, height: board.height, tiles: board.cells,
+    start: board.start, end: board.end, terrainCost, weight};
+  mapPayload(payload);
+  const code = "RRM1-" + JSON.stringify(payload);
+  if (code.length > MAX_MAP_CODE) throw new RangeError("Map code too large");
+  return code;
+}
+export function importMap(code) {
+  if (typeof code !== "string" || code.length > MAX_MAP_CODE || !code.startsWith("RRM1-") ||
+    !/^[\x20-\x7e]+$/.test(code)) throw new TypeError("Invalid map code");
+  return mapPayload(JSON.parse(code.slice(5)));
+}
+
 export function predictionFact(id, results) {
   const get = a => results.find(r => r.algorithm === a), bfs = get("bfs"), d = get("dijkstra"), a = get("astar"), w = get("weighted");
   if (!bfs || !d || !a || !w || results.some(r => !r.found)) return null;
   if (id === "trap") return {answer: bfs.cost > d.cost ? "yes" : "no", evidence: `BFS ${bfs.steps}회 / 비용 ${bfs.cost}, Dijkstra ${d.steps}회 / 비용 ${d.cost}. BFS는 이동 횟수를 최소화합니다.`};
   if (id === "maze" || id === "bottleneck") return {answer: a.visited.length < d.visited.length ? "yes" : "no", evidence: `A* ${a.visited.length}칸, Dijkstra ${d.visited.length}칸 확장. 벽을 무시하는 거리 추정과 동률 순서가 탐색 범위를 결정합니다. 항상 적어지는 것은 아닙니다.`};
-  return {answer: w.cost > a.cost ? "yes" : "no", evidence: `Weighted A*(w=${w.weight}) 비용 ${w.cost} / ${w.visited.length}칸, A* 비용 ${a.cost} / ${a.visited.length}칸. ${w.weight === 1 ? "w=1은 기본 A*와 같아 최소 비용을 보장합니다." : "이 결과 한 번으로 다른 지도의 최적성을 보장할 수 없습니다."}`};
+  return {answer: w.cost > a.cost ? "yes" : "no", evidence: `Weighted A*(w=${w.weight}) 비용 ${w.cost} / ${w.visited.length}칸, A* 비용 ${a.cost} / ${a.visited.length}칸.`};
 }
 
 export function evaluateBuild(board, baseline, results, budget = 8) {
